@@ -240,11 +240,14 @@ function sendCandle() {
         posZ: posZ,
         velX: velX,
         velZ: velZ
+    }).then(() => {
+        // Hide the message panel only after successfully creating the candle
+        messagePanel.classList.remove('show');
+        messageText.value = '';
+    }).catch(error => {
+        console.error("Error creating candle:", error);
+        alert("There was an error sending your candle. Please try again.");
     });
-    
-    // Hide the message panel
-    messagePanel.classList.remove('show');
-    messageText.value = '';
 }
 
 function onMouseDown(event) {
@@ -369,4 +372,3 @@ function animate() {
     controls.update();
     renderer.render(scene, camera);
 }
-
