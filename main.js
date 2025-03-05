@@ -11,6 +11,9 @@ let water, scene, camera, renderer, controls;
 let raycaster, mouse, hoveredCandle = null;
 let currentTime = 0;
 let isWaterLoaded = false;
+let isTossing = false;
+let tossStart = null;
+let tossDirection = new THREE.Vector2();
 
 // Elements
 const createCandleBtn = document.getElementById('create-candle-btn');
@@ -34,7 +37,7 @@ createCandleBtn.addEventListener('click', () => {
     setTimeout(() => messageText.focus(), 300);
 });
 
-sendCandleBtn.addEventListener('click', sendCandle);
+sendCandleBtn.addEventListener('click', startToss);
 
 closeMessageBtn.addEventListener('click', () => {
     messageView.classList.remove('show');
@@ -42,6 +45,7 @@ closeMessageBtn.addEventListener('click', () => {
 
 window.addEventListener('mousedown', onMouseDown, false);
 window.addEventListener('mousemove', onMouseMove, false);
+window.addEventListener('mouseup', onMouseUp, false);
 window.addEventListener('resize', onWindowResize, false);
 
 // Subscribe to candle collection
@@ -77,8 +81,8 @@ function init() {
     water = new Water(
         waterGeometry,
         {
-            textureWidth: 2048,  
-            textureHeight: 2048, 
+            textureWidth: 4096,  
+            textureHeight: 4096, 
             waterNormals: new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg', function() {
                 isWaterLoaded = true;
                 hideLoadingOverlay();
@@ -86,7 +90,7 @@ function init() {
             sunDirection: new THREE.Vector3(),
             sunColor: 0xffffff,
             waterColor: 0x001e0f,
-            distortionScale: 1.5,  
+            distortionScale: 0.8,  
             fog: scene.fog !== undefined
         }
     );
@@ -218,22 +222,44 @@ function hideLoadingOverlay() {
     loadingOverlay.classList.add('hidden');
 }
 
-function sendCandle() {
+function startToss() {
     const message = messageText.value.trim();
     if (!message) {
         alert("Please write a message for your candle");
         return;
     }
     
-    // Generate random position and velocity
-    const posX = (Math.random() - 0.5) * 300;
-    const posZ = (Math.random() - 0.5) * 300;
+    // Enter tossing mode
+    isTossing = true;
     
-    // Random velocity (magnitude between 1 and 3)
-    const speed = 1 + Math.random() * 2;
-    const angle = Math.random() * Math.PI * 2;
-    const velX = Math.cos(angle) * speed;
-    const velZ = Math.sin(angle) * speed;
+    // Change button text
+    sendCandleBtn.textContent = "Click and drag to toss...";
+    sendCandleBtn.disabled = true;
+    
+    // Add tossing visual indicator
+    document.body.classList.add('tossing-mode');
+}
+
+function sendCandle() {
+    const message = messageText.value.trim();
+    
+    // Calculate velocity based on the toss direction and length
+    const tossLength = tossDirection.length();
+    const speed = Math.min(Math.max(tossLength * 20, 1), 10); // Speed based on drag length, clamped between 1-10
+    
+    // Use normalized direction with the calculated speed
+    const normalizedDirection = tossDirection.clone().normalize();
+    const velX = normalizedDirection.x * speed;
+    const velZ = normalizedDirection.y * speed;
+    
+    // Generate random position near the camera
+    const cameraDirection = new THREE.Vector3();
+    camera.getWorldDirection(cameraDirection);
+    
+    // Start candle slightly in front of the camera
+    const positionOffset = cameraDirection.multiplyScalar(50);
+    const posX = camera.position.x + positionOffset.x + (Math.random() - 0.5) * 20;
+    const posZ = camera.position.z + positionOffset.z + (Math.random() - 0.5) * 20;
     
     // Save candle to the database
     room.collection('candle').create({
@@ -246,14 +272,29 @@ function sendCandle() {
         // Hide the message panel only after successfully creating the candle
         messagePanel.classList.remove('show');
         messageText.value = '';
+        // Reset tossing mode
+        isTossing = false;
+        document.body.classList.remove('tossing-mode');
+        sendCandleBtn.textContent = "Launch Candle";
+        sendCandleBtn.disabled = false;
     }).catch(error => {
         console.error("Error creating candle:", error);
         alert("There was an error sending your candle. Please try again.");
+        // Reset tossing mode
+        isTossing = false;
+        document.body.classList.remove('tossing-mode');
+        sendCandleBtn.textContent = "Launch Candle";
+        sendCandleBtn.disabled = false;
     });
 }
 
 function onMouseDown(event) {
     event.preventDefault();
+    
+    if (isTossing) {
+        tossStart = new THREE.Vector2(event.clientX, event.clientY);
+        return;
+    }
     
     // Calculate mouse position
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -284,6 +325,15 @@ function onMouseDown(event) {
 
 function onMouseMove(event) {
     event.preventDefault();
+    
+    if (isTossing && tossStart) {
+        // Calculate toss direction vector
+        tossDirection.x = -(event.clientX - tossStart.x) / 100;
+        tossDirection.y = -(event.clientY - tossStart.y) / 100;
+        
+        // Update toss indicator line or arrow (if you implement one)
+        return;
+    }
     
     // Calculate mouse position
     mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
@@ -316,6 +366,14 @@ function onMouseMove(event) {
     }
 }
 
+function onMouseUp(event) {
+    if (isTossing && tossStart) {
+        // Complete the toss
+        sendCandle();
+        tossStart = null;
+    }
+}
+
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -328,7 +386,7 @@ function animate() {
     currentTime += 0.01;
     
     // Update water - slower speed for more realistic movement
-    water.material.uniforms['time'].value += 1.0 / 240.0;  
+    water.material.uniforms['time'].value += 1.0 / 360.0;  
     
     // Update candles - physics and flame effects
     for (const candle of candles) {
