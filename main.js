@@ -30,6 +30,8 @@ animate();
 // Event listeners
 createCandleBtn.addEventListener('click', () => {
     messagePanel.classList.add('show');
+    // Focus on the textarea when panel opens
+    setTimeout(() => messageText.focus(), 300);
 });
 
 sendCandleBtn.addEventListener('click', sendCandle);
@@ -75,8 +77,8 @@ function init() {
     water = new Water(
         waterGeometry,
         {
-            textureWidth: 1024,
-            textureHeight: 1024,
+            textureWidth: 2048,  
+            textureHeight: 2048, 
             waterNormals: new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg', function() {
                 isWaterLoaded = true;
                 hideLoadingOverlay();
@@ -84,7 +86,7 @@ function init() {
             sunDirection: new THREE.Vector3(),
             sunColor: 0xffffff,
             waterColor: 0x001e0f,
-            distortionScale: 2.7,
+            distortionScale: 1.5,  
             fog: scene.fog !== undefined
         }
     );
@@ -326,13 +328,13 @@ function animate() {
     currentTime += 0.01;
     
     // Update water - slower speed for more realistic movement
-    water.material.uniforms['time'].value += 1.0 / 120.0;
+    water.material.uniforms['time'].value += 1.0 / 240.0;  
     
     // Update candles - physics and flame effects
     for (const candle of candles) {
         // Update position based on velocity
         const userData = candle.userData;
-        candle.position.x += userData.velocity.x * 0.016; // 0.016 is approximately 1/60 (60fps)
+        candle.position.x += userData.velocity.x * 0.016; 
         candle.position.z += userData.velocity.y * 0.016;
         
         // Bobbing effect using noise
