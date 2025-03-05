@@ -1,0 +1,252 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Light a Candle</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/",
+            "simplex-noise": "https://cdn.jsdelivr.net/npm/simplex-noise@4.0.1/dist/esm/simplex-noise.js"
+        }
+    }
+    </script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+            background-color: #001220;
+            color: #fff;
+        }
+        
+        #canvas-container {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        
+        #ui-container {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding-bottom: 20px;
+        }
+        
+        #message-panel {
+            background-color: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            margin-bottom: 20px;
+            pointer-events: auto;
+            transform: translateY(100%);
+            transition: transform 0.3s ease-out;
+        }
+        
+        #message-panel.show {
+            transform: translateY(0);
+        }
+        
+        #create-candle-btn {
+            background-color: #ff9c33;
+            color: #111;
+            border: none;
+            border-radius: 30px;
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            pointer-events: auto;
+            box-shadow: 0 2px 10px rgba(255, 156, 51, 0.4);
+            transition: all 0.2s;
+            font-weight: bold;
+        }
+        
+        #create-candle-btn:hover {
+            background-color: #ffb966;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(255, 156, 51, 0.6);
+        }
+        
+        #message-text {
+            width: 100%;
+            height: 100px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            color: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            resize: none;
+            font-family: inherit;
+        }
+        
+        #message-text::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        #send-candle-btn {
+            background-color: #ff9c33;
+            color: #111;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+        
+        #message-view {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0);
+            background-color: rgba(0, 0, 0, 0.8);
+            border-radius: 10px;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+            pointer-events: auto;
+            z-index: 3;
+            transition: transform 0.3s ease-out;
+            box-shadow: 0 0 20px rgba(255, 156, 51, 0.4);
+            border: 1px solid rgba(255, 156, 51, 0.3);
+        }
+        
+        #message-view.show {
+            transform: translate(-50%, -50%) scale(1);
+        }
+        
+        #message-content {
+            margin-bottom: 20px;
+            font-style: italic;
+            line-height: 1.6;
+        }
+        
+        #message-author {
+            text-align: right;
+            font-weight: bold;
+            color: #ff9c33;
+        }
+        
+        #close-message-btn {
+            background-color: transparent;
+            color: white;
+            border: 1px solid white;
+            border-radius: 5px;
+            padding: 8px 16px;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+        
+        .flame {
+            filter: blur(2px);
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #001220;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            transition: opacity 1s;
+        }
+        
+        .loading-overlay.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .loading-candle {
+            width: 100px;
+            height: 150px;
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .candle-body {
+            width: 40px;
+            height: 100px;
+            background: linear-gradient(180deg, #ffecb3, #e6b800);
+            border-radius: 5px;
+            position: absolute;
+            bottom: 0;
+            left: 30px;
+        }
+        
+        .candle-flame {
+            width: 30px;
+            height: 40px;
+            background: radial-gradient(ellipse at center, #ffff99, #ff9933);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            position: absolute;
+            top: 0;
+            left: 35px;
+            filter: blur(3px);
+            animation: flicker 0.5s infinite alternate;
+            box-shadow: 0 0 20px #ff9933, 0 0 40px #ff9933;
+        }
+        
+        @keyframes flicker {
+            0% { transform: scale(0.9); opacity: 0.8; }
+            100% { transform: scale(1.1); opacity: 1; }
+        }
+        
+        .loading-text {
+            font-size: 24px;
+            color: #ff9c33;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay">
+        <div class="loading-candle">
+            <div class="candle-body"></div>
+            <div class="candle-flame"></div>
+        </div>
+        <div class="loading-text">Loading candles...</div>
+    </div>
+    
+    <div id="canvas-container"></div>
+    
+    <div id="ui-container">
+        <div id="message-panel">
+            <textarea id="message-text" placeholder="Write your message to send with the candle..."></textarea>
+            <button id="send-candle-btn">Launch Candle</button>
+        </div>
+        <button id="create-candle-btn">Light a Candle</button>
+    </div>
+    
+    <div id="message-view">
+        <div id="message-content"></div>
+        <div id="message-author"></div>
+        <button id="close-message-btn">Close</button>
+    </div>
+    
+    <script type="module" src="main.js"></script>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v8c78df7c7c0f484497ecbca7046644da1771523124516" integrity="sha512-8DS7rgIrAmghBFwoOTujcf6D9rXvH8xm8JQ1Ja01h9QX8EzXldiszufYa4IFfKdLUKTTrnSFXLDkUEOTrZQ8Qg==" data-cf-beacon='{"version":"2024.11.0","token":"4c6229722a6346bc8eb5cb0e5eae5d41","server_timing":{"name":{"cfCacheStatus":true,"cfEdge":true,"cfExtPri":true,"cfL4":true,"cfOrigin":true,"cfSpeedBrain":true},"location_startswith":null}}' crossorigin="anonymous"></script>
+</body>
+</html>
