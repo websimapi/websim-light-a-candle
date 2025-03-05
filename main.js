@@ -71,12 +71,12 @@ function init() {
     mouse = new THREE.Vector2();
     
     // Water
-    const waterGeometry = new THREE.PlaneGeometry(10000, 10000);
+    const waterGeometry = new THREE.PlaneGeometry(10000, 10000, 100, 100);
     water = new Water(
         waterGeometry,
         {
-            textureWidth: 512,
-            textureHeight: 512,
+            textureWidth: 1024,
+            textureHeight: 1024,
             waterNormals: new THREE.TextureLoader().load('https://threejs.org/examples/textures/waternormals.jpg', function() {
                 isWaterLoaded = true;
                 hideLoadingOverlay();
@@ -84,7 +84,7 @@ function init() {
             sunDirection: new THREE.Vector3(),
             sunColor: 0xffffff,
             waterColor: 0x001e0f,
-            distortionScale: 3.7,
+            distortionScale: 2.7,
             fog: scene.fog !== undefined
         }
     );
@@ -325,8 +325,8 @@ function animate() {
     
     currentTime += 0.01;
     
-    // Update water
-    water.material.uniforms['time'].value += 1.0 / 60.0;
+    // Update water - slower speed for more realistic movement
+    water.material.uniforms['time'].value += 1.0 / 120.0;
     
     // Update candles - physics and flame effects
     for (const candle of candles) {
